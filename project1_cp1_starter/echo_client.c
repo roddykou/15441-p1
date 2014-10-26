@@ -20,14 +20,20 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 
-#define ECHO_PORT 9999
 #define BUF_SIZE 4096
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
-    {
-        fprintf(stderr, "usage: %s <server-ip> <port>",argv[0]);
+    char *server_ip, *port;
+
+    if (argc == 3) {
+        server_ip = argv[1];
+        port = argv[2];
+    } else if (argc == 1) {
+        server_ip = "127.0.0.1";
+        port = "9999";
+    } else {
+        fprintf(stderr, "usage: %s <server-ip> <port>\n",argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -36,12 +42,12 @@ int main(int argc, char* argv[])
     int status, sock;
     struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
-    struct addrinfo *servinfo; //will point to the results
-    hints.ai_family = AF_UNSPEC;  //don't care IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM; //TCP stream sockets
-    hints.ai_flags = AI_PASSIVE; //fill in my IP for me
+    struct addrinfo *servinfo;          //will point to the results
+    hints.ai_family = AF_UNSPEC;        //don't care IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM;    //TCP stream sockets
+    hints.ai_flags = AI_PASSIVE;        //fill in my IP for me
 
-    if ((status = getaddrinfo(argv[1], argv[2], &hints, &servinfo)) != 0) 
+    if ((status = getaddrinfo(server_ip, port, &hints, &servinfo)) != 0) 
     {
         fprintf(stderr, "getaddrinfo error: %s \n", gai_strerror(status));
         return EXIT_FAILURE;
@@ -59,17 +65,20 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
         
-    char msg[BUF_SIZE]; 
-    fgets(msg, BUF_SIZE, stdin);
-    
-    int bytes_received;
-    fprintf(stdout, "Sending %s", msg);
-    send(sock, msg , strlen(msg), 0);
-    if((bytes_received = recv(sock, buf, BUF_SIZE, 0)) > 1)
-    {
-        buf[bytes_received] = '\0';
-        fprintf(stdout, "Received %s", buf);
-    }        
+    char msg[BUF_SIZE];
+
+    while (1) { 
+        fgets(msg, BUF_SIZE, stdin);
+        
+        int bytes_received;
+        fprintf(stdout, "Sending %s", msg);
+        send(sock, msg , strlen(msg), 0);
+        if((bytes_received = recv(sock, buf, BUF_SIZE, 0)) > 1)
+        {
+            buf[bytes_received] = '\0';
+            fprintf(stdout, "Received %s", buf);
+        }      
+    }  
 
     freeaddrinfo(servinfo);
     close(sock);    
